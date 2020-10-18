@@ -1,8 +1,8 @@
 ---
-title:  "#1 - Spring Boot"
+title:  "#1 - Spring Boot - Criando o primeiro Controller"
 date:   2020-10-17 16:41:23
 categories: [java]
-tags: [java]
+tags: [java,spring]
 ---
 Nesse post nós vamos criar nossa primeira API Rest utilizando a linguagem Java no framework Spring Boot. Antes de mais nada para criar o projeto podemos acessar o site do [Spring Initializr](https://start.spring.io). Assim entrando no link marcamos as seguintes opções:
 ![](https://i.ibb.co/TLx4ZB6/spring-initializr.png)
@@ -361,4 +361,4 @@ spring.jpa.properties.hibernate.format_sql = true
 spring.h2.console.enabled=true
 spring.h2.console.path=/h2-console
 ```
-Agora é só rodar o projeto e brincar com as requisições, o projeto está disponível no meu [Github](https://github.com/martin-petersen/spring-example.git), outra coisa que você pode fazer é ver as tabelas do seu banco acessando o console do [H2](http://localhost:8080/h2-console) quando o projeto estiver executando, dentro do projeto também vou deixar um package com requisições HTTP para facilitar os testes. Se divirtam e criem várias APIs para que o conhecimento fique fixado e até o próximo post!
+Agora é só rodar o projeto e brincar com as requisições, o projeto está disponível no para download [aqui](https://drive.google.com/file/d/1HpT507siqx_qh6YLe_9fJ-8srja632Gf/view?usp=sharing), outra coisa que você pode fazer é ver as tabelas do seu banco acessando o console do [H2](http://localhost:8080/h2-console) quando o projeto estiver executando, dentro do projeto também vou deixar um package com requisições HTTP para facilitar os testes. Se divirtam e criem várias APIs para que o conhecimento fique fixado e até o próximo post!
