@@ -58,7 +58,7 @@ Dentro do package <strong>model</strong> do projeto, nós vamos criar uma classe
 Para o nosso exemplo a entidade tem, além do id, mais quatro atributos:
 + nome(String),
 + dataNascimento(LocalDate),
-+ naturalidade(String),
++ estado(String),
 + idade(int);
 
 Ao final vamos ter algo assim:
@@ -79,8 +79,18 @@ public class Pessoa {
     private Long id;
     private String nome;
     private LocalDate dataNascimento;
-    private String naturalidade;
+    private String estado;
     private int idade;
+
+    public Pessoa() {
+    }
+
+    public Pessoa(Pessoa pessoa) {
+        this.nome = pessoa.getNome().toUpperCase();
+        this.dataNascimento = pessoa.dataNascimento;
+        this.estado = pessoa.getEstado().toUpperCase();
+        this.idade = pessoa.getIdade();
+    }
 
     public Long getId() {
         return id;
@@ -106,12 +116,12 @@ public class Pessoa {
         this.dataNascimento = dataNascimento;
     }
 
-    public String getNaturalidade() {
-        return naturalidade;
+    public String getEstado() {
+        return estado;
     }
 
-    public void setNaturalidade(String naturalidade) {
-        this.naturalidade = naturalidade;
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public int getIdade() {
@@ -145,7 +155,7 @@ public interface PessoaRepository extends JpaRepository<Pessoa,Long> {
     */
     @Query("from Pessoa i where upper(i.nome) like :nome")
     public List<Pessoa> findByNome(String nome);
-    public List<Pessoa> findByNaturalidade(String naturalidade);
+    public List<Pessoa> findByEstado(String estado);
     public List<Pessoa> findByDataNascimentoAfter(LocalDate localDate);
     public List<Pessoa> findByDataNascimentoBefore(LocalDate localDate);
     public List<Pessoa> findByIdade(int idade);
@@ -162,6 +172,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -187,8 +198,12 @@ public class PessoaService {
 
     @Transactional
     public Pessoa update(Long id, Pessoa pessoa) {
-        Pessoa attPessoa = new Pessoa(pessoa);
         if(pessoaRepository.findById(id).isPresent()) {
+            Pessoa attPessoa = pessoaRepository.findById(id).get();
+            attPessoa.setNome(pessoa.getNome().toUpperCase());
+            attPessoa.setEstado(pessoa.getEstado().toUpperCase());
+            attPessoa.setDataNascimento(pessoa.getDataNascimento());
+            attPessoa.setIdade(pessoa.getIdade());
             pessoaRepository.save(attPessoa);
             return attPessoa;
         } else {
@@ -197,12 +212,9 @@ public class PessoaService {
     }
 
     @Transactional
-    public boolean delete(Long id) {
+    public void delete(Long id) {
         if(pessoaRepository.findById(id).isPresent()) {
             pessoaRepository.delete(pessoaRepository.findById(id).get());
-            return true;
-        } else {
-            return false;
         }
     }
 
@@ -210,16 +222,20 @@ public class PessoaService {
         return pessoaRepository.findByNome(nome.toUpperCase());
     }
 
-    public List<Pessoa> findByNaturalidade(String naturalidade) {
-        return pessoaRepository.findByNaturalidade(naturalidade.toUpperCase());
+    public List<Pessoa> findByUF(String naturalidade) {
+        return pessoaRepository.findByEstado(naturalidade.toUpperCase());
     }
 
-    public List<Pessoa> findByDataNascimentoAfter(LocalDate dataNacimento) {
-        return pessoaRepository.findByDataNascimentoAfter(dataNacimento);
+    public List<Pessoa> findByDataNascimentoAfter(String dataNascimento) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(dataNascimento,formatter);
+        return pessoaRepository.findByDataNascimentoAfter(localDate);
     }
 
-    public List<Pessoa> findByDataNascimentoBefore(LocalDate dataNacimento) {
-        return pessoaRepository.findByDataNascimentoBefore(dataNacimento);
+    public List<Pessoa> findByDataNascimentoBefore(String dataNascimento) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(dataNascimento,formatter);
+        return pessoaRepository.findByDataNascimentoBefore(localDate);
     }
 
     public List<Pessoa> findByIdade(int idade) {
@@ -257,21 +273,22 @@ public class PessoaController {
     */
     @GetMapping
     public ResponseEntity<List<Pessoa>> listagemPessoas(@RequestParam(required = false)String nome,
-                                                        @RequestParam(required = false)String naturalidade,
-                                                        @RequestParam(required = false)LocalDate depois,
-                                                        @RequestParam(required = false)LocalDate antes,
+                                                        @RequestParam(required = false)String uf,
+                                                        @RequestParam(required = false)String depois,
+                                                        @RequestParam(required = false)String antes,
                                                         @RequestParam(required = false)Integer idade) {
-
         if(nome!=null) {
             return ResponseEntity.ok(pessoaService.findByNome(nome.toUpperCase()));
-        } else if(naturalidade!=null) {
-            return ResponseEntity.ok(pessoaService.findByNaturalidade(naturalidade.toUpperCase()));
+        } else if(uf!=null) {
+            return ResponseEntity.ok(pessoaService.findByUF(uf.toUpperCase()));
         } else if(idade!=null) {
             return ResponseEntity.ok(pessoaService.findByIdade(idade));
         } else if(depois!=null) {
-            return ResponseEntity.ok(pessoaService.findByDataNascimentoAfter(depois));
+            List<Pessoa> pessoas = pessoaService.findByDataNascimentoAfter(depois);
+            return ResponseEntity.ok(pessoas);
         } else if(antes!=null) {
-            return ResponseEntity.ok(pessoaService.findByDataNascimentoBefore(antes));
+            List<Pessoa> pessoas = pessoaService.findByDataNascimentoBefore(antes);
+            return ResponseEntity.ok(pessoas);
         } else {
             return ResponseEntity.ok(pessoaService.findAll());
         }
