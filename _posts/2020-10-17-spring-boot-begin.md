@@ -30,7 +30,7 @@ A próxima parte é importante e se trata de configurar as dependências da sua 
 </p>
 </h4>
 Para isso é necessário abrir o projeto na IDE de sua preferência e selecionar o arquivo <strong>pom.xml</strong> que fica na pasta raiz. Feito isso você precisa declarar as dependências dentro do bloco descrito por <strong>\<dependencies></dependencies></strong>, nesse trecho cole o seguinte código:
-``` xml
+```xml
 <dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -361,4 +361,4 @@ spring.jpa.properties.hibernate.format_sql = true
 spring.h2.console.enabled=true
 spring.h2.console.path=/h2-console
 ```
-Agora é só rodar o projeto e brincar com as requisições, o projeto está disponível no para download [aqui](https://drive.google.com/file/d/1HpT507siqx_qh6YLe_9fJ-8srja632Gf/view?usp=sharing), outra coisa que você pode fazer é ver as tabelas do seu banco acessando o console do [H2](http://localhost:8080/h2-console) quando o projeto estiver executando, dentro do projeto também vou deixar um package com requisições HTTP para facilitar os testes. Se divirtam e criem várias APIs para que o conhecimento fique fixado e até o próximo post!
+Agora é só rodar o projeto e brincar com as requisições, o projeto está disponível no para download [aqui](https://drive.google.com/file/d/1BBJKUfGr_qcgp9N4O1MuWF3qiZNfAMbz/view?usp=sharing), outra coisa que você pode fazer é ver as tabelas do seu banco acessando o console do [H2](http://localhost:8080/h2-console) quando o projeto estiver executando, dentro do projeto também vou deixar um package com requisições HTTP para facilitar os testes. Se divirtam e criem várias APIs para que o conhecimento fique fixado e até o próximo post!
