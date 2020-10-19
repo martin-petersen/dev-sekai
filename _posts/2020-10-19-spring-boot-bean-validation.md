@@ -79,6 +79,7 @@ imagine o cliente ter a preocupação de colocar uma string especificando a data
 ```java
 package com.example.demo.form;
 
+import javax.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
 public class PessoaFORM {
@@ -93,7 +94,7 @@ public class PessoaFORM {
         return nome;
     }
 
-    public String getDataNascimento() {
+    public LocalDate getDataNascimento() {
         return dataNascimento;
     }
 
@@ -165,10 +166,35 @@ public class PessoaDTO {
     }
 }
 ```
-criado nosso dto vamos alterar nosso método <strong>listagemPessoas</strong> para retornar uma lista de PessoaDTO
+criado nosso dto vamos alterar nossos métodos do controller para retornar uma lista de PessoaDTO
 
 ```java
-@GetMapping
+package com.example.demo.controller;
+
+import com.example.demo.dto.PessoaDTO;
+import com.example.demo.form.PessoaFORM;
+import com.example.demo.model.Pessoa;
+import com.example.demo.service.PessoaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.validation.Valid;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.List;
+
+@RestController
+@RequestMapping(value = "/pessoa")
+public class PessoaController {
+    @Autowired
+    private PessoaService pessoaService;
+
+    /*
+    * Essa notação indica que esse método vai ser chamado em requisições GET
+    */
+    @GetMapping
     public ResponseEntity<List<PessoaDTO>> listagemPessoas(@RequestParam(required = false)String nome,
                                                            @RequestParam(required = false)String uf,
                                                            @RequestParam(required = false)String depois,
@@ -189,12 +215,120 @@ criado nosso dto vamos alterar nosso método <strong>listagemPessoas</strong> pa
             return ResponseEntity.ok(pessoaService.findAll());
         }
     }
+
+    /*
+     * Essa notação indica que esse método vai ser chamado em requisições POST
+     */
+    @PostMapping
+    public ResponseEntity<PessoaDTO> salvar(@Valid @RequestBody PessoaFORM p,
+                                         UriComponentsBuilder uriComponentsBuilder) {
+        try {
+            PessoaDTO pessoa = pessoaService.save(p);
+            URI uri = uriComponentsBuilder.path("/pessoa/{id}").buildAndExpand(pessoa.getId()).toUri();
+            return ResponseEntity.created(uri).body(pessoa);
+        }catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /*
+     * Essa notação indica que esse método vai ser chamado em requisições PUT
+     */
+
+    /*
+     * As notações @PathVariable e @RequestBody significam respectivamente que esse controller
+     * recebe uma variável que vem do caminho da URL por isso Path Variable e ele também
+     * recebe no corpo da requisição, por isso Request Body, um objeto json do tipo Pessoa
+     */
+    @PutMapping("{id}")
+    public ResponseEntity<PessoaDTO> atualizar(@PathVariable Long id,
+                                            @Valid @RequestBody PessoaFORM p) {
+        try {
+            PessoaDTO pessoa = pessoaService.update(id, p);
+            return ResponseEntity.ok(pessoa);
+        }catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /*
+     * Essa notação indica que esse método vai ser chamado em requisições DELETE
+     */
+    @DeleteMapping("{id}")
+    public ResponseEntity<?> remover(@PathVariable Long id) {
+        try {
+            pessoaService.delete(id);
+            return ResponseEntity.ok().build();
+        }catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+}
 ```
-não podemos também trazer para o controller essa lista de Pessoa para o controller para aqui ser convertido, temos que trazer diretamente do service já na forma de lista de PessoaDTO, para isso alteramos o retorno dos nossos métodos de listagem na classe PessoaService e criamos um método privado para realizar essa conversão de uma lista para outra evitando repetição de código no nosso projeto
+não podemos também trazer para o controller essa lista de Pessoa para o controller para aqui ser convertido, temos que trazer diretamente do service já na forma de lista de PessoaDTO, para isso alteramos o retorno dos nossos métodos na classe PessoaService e criamos um método privado para realizar essa conversão de uma lista para outra evitando repetição de código no nosso projeto
 
 
 ```java
-public List<PessoaDTO> findByNome(String nome) {
+package com.example.demo.service;
+
+import com.example.demo.dto.PessoaDTO;
+import com.example.demo.form.PessoaFORM;
+import com.example.demo.model.Pessoa;
+import com.example.demo.repository.PessoaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class PessoaService {
+    @Autowired
+    private PessoaRepository pessoaRepository;
+
+    /*
+    * A notação @Transactional cria uma transação com o banco de dados,
+    * trocando em miúdos, em uma situação onde várias classes repository
+    * estejam sendo utilizadas, se alguma transação com banco em um desses
+    * repositorys falhar, então todos falham, mesmo que uma delas tenha sido
+    * concluída com sucesso acontece um rollback. Ou todas as transações funcionam
+    * ou nenhuma delas funciona. No nosso caso não é funcional pois só temos um
+    * repository mas fica de aprendizado.
+    */
+    @Transactional
+    public PessoaDTO save(PessoaFORM pessoa) {
+        Pessoa novaPessoa = new Pessoa(pessoa);
+        pessoaRepository.save(novaPessoa);
+        return new PessoaDTO(novaPessoa.getId(),novaPessoa.getNome(),novaPessoa.getEstado(),novaPessoa.getDateCeated());
+    }
+
+    @Transactional
+    public PessoaDTO update(Long id, PessoaFORM pessoa) {
+        if(pessoaRepository.findById(id).isPresent()) {
+            Pessoa attPessoa = pessoaRepository.findById(id).get();
+            attPessoa.setNome(pessoa.getNome().toUpperCase());
+            attPessoa.setEstado(pessoa.getEstado().toUpperCase());
+            attPessoa.setDataNascimento(pessoa.getDataNascimento());
+            attPessoa.setIdade(pessoa.getIdade());
+            pessoaRepository.save(attPessoa);
+            return new PessoaDTO(attPessoa.getId(),attPessoa.getNome(),attPessoa.getEstado(),attPessoa.getDateCeated());
+        } else {
+            return null;
+        }
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        if(pessoaRepository.findById(id).isPresent()) {
+            pessoaRepository.delete(pessoaRepository.findById(id).get());
+        }
+    }
+
+    public List<PessoaDTO> findByNome(String nome) {
         return conversorEntidadeParaDTO(pessoaRepository.findByNome(nome.toUpperCase()));
     }
 
@@ -227,12 +361,13 @@ public List<PessoaDTO> findByNome(String nome) {
      * streams presente a partir do Java 8, mas se não tiver domínio podem utilizar
      * for ou foreach sem qualquer prejuízo.
      */
-    
+
     private List<PessoaDTO> conversorEntidadeParaDTO(List<Pessoa> pessoas) {
         List<PessoaDTO> pessoasDTO = new ArrayList<>();
         pessoasDTO = pessoas.stream().map(pessoa -> new PessoaDTO(pessoa.getId(),
                 pessoa.getNome(),pessoa.getEstado(),pessoa.getDateCeated())).collect(Collectors.toList());
         return pessoasDTO;
     }
+}
 ```
 Agora com as alterações feitas, nosso projeto está mais consistente e empregando melhores práticas de programação. O link para download do projeto está [aqui](https://drive.google.com/file/d/1yxmlCuEcmO-isYIk7vNc95nDWQPMt8VX/view?usp=sharing) valendo ressaltar que a prática leva à perfeição então criem mais APIs para fixar o conhecimento e até o próximo post!
