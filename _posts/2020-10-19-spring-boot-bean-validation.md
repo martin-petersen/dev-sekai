@@ -82,8 +82,10 @@ package com.example.demo.form;
 import java.time.LocalDate;
 
 public class PessoaFORM {
+    @NotBlank
     private String nome;
-    private String dataNascimento;
+    private LocalDate dataNascimento;
+    @NotBlank
     private String estado;
     private int idade;
 
