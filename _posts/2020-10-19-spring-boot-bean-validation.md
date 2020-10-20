@@ -74,19 +74,17 @@ public class Pessoa {
         this.dateCeated = LocalDateTime.now();
     }
 ```
-imagine o cliente ter a preocupação de colocar uma string especificando a data (ANO-MÊS-DIA) e hora (HORA:MINUTO:SEGUNDO:MILÉSIMOS) o trabalho que seria fazer isso com tamanha precisão, para isso nós vamos mudar o nosso controller para não mais receber Pessoa como parâmetro e sim um formulário com os campos que o cliete pode nos informar no nosso projeto então criamos um package <strong>form</strong> e uma classe <strong>PessoaFORM</strong>, para essa classe não precisamos de setters apenas os getters.
+imagine o cliente ter a preocupação de colocar uma string especificando a data (ANO-MÊS-DIA) e hora (HORA:MINUTO:SEGUNDO:MILÉSIMOS) o trabalho que seria fazer isso com tamanha precisão, para isso nós vamos mudar o nosso controller para não mais receber Pessoa como parâmetro e sim uma classe com os campos que o cliete realmente precisa nos informar, no nosso projeto então criamos um package <strong>dto</strong> e uma classe <strong>PessoaDTO</strong>, para teremos então essa classe:
 
 ```java
-package com.example.demo.form;
+package com.example.demo.dto;
 
 import javax.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
-public class PessoaFORM {
-    @NotBlank
+public class PessoaDTO {
     private String nome;
     private LocalDate dataNascimento;
-    @NotBlank
     private String estado;
     private int idade;
 
@@ -111,27 +109,37 @@ Em seguida colocamos o controller para receber essa classe como parâmetro e aju
 
 ```java
 @PostMapping
-    public ResponseEntity<Pessoa> salvar(@Valid @RequestBody PessoaFORM p,
+    public ResponseEntity<Pessoa> salvar(@Valid @RequestBody PessoaDTO p,
                                          UriComponentsBuilder uriComponentsBuilder)
 
 @PutMapping("{id}")
 public ResponseEntity<Pessoa> atualizar(@PathVariable Long id,
-                                        @Valid @RequestBody PessoaFORM p)
+                                        @Valid @RequestBody PessoaDTO p)
 ```
 com tudo pronto nosso programa roda recebendo esse formulário, prevenindo atributos em branco, não precisamos pedir o <strong>dateCreated</strong>, porém os mais atentos perceberam que nossas requisições do tipo GET continuam enviando nossa entidade como resposta da requisição e para nosso exemplo não tem problema, mas imagine em um programa que lista usuários com informações sensíveis como senhas e documentos, como prevenir isso?
 
-A resposta é simples, nós não retornamos classes de domínio e sim DTOs (Data Transfer Objects) uma classe que abstrai da nossa entidade apenas o que deve ser entregue ao cliente final, vamos criar uma também no nosso package <strong>dto</strong> nossa classe PessoaDTO com a finalidade de não entregar a data de nascimento e idade da pessoa, pensando no bem das moças que utilizarem nossa API.
+A resposta é simples, nós também devemos retornar um DTO, já citei o termo DTO duas vezes então para que não haja qualquer dúvida um DTO é um (Data Object Transfer) um objeto de transferência de dados tanto para entrar no nossa API quanto para retornar ao nosso cliente, vamos criar agora nossa classe ResponsePessoaDTO no package <strong>dto</strong> de forma que ele não nos traga a idade e data de nascimento das pessoas cadastradas
 
 ```java
 package com.example.demo.dto;
 
 import java.time.LocalDateTime;
 
-public class PessoaDTO {
+public class PessoaResponseResponseDTO {
     private Long id;
     private String nome;
     private String estado;
     private LocalDateTime dateCreated;
+
+    public PessoaResponseResponseDTO() {
+    }
+
+    public PessoaResponseResponseDTO(Long id, String nome, String estado, LocalDateTime dateCreated) {
+        this.id = id;
+        this.nome = nome;
+        this.estado = estado;
+        this.dateCreated = dateCreated;
+    }
 
     public Long getId() {
         return id;
@@ -171,9 +179,8 @@ criado nosso dto vamos alterar nossos métodos do controller para retornar uma l
 ```java
 package com.example.demo.controller;
 
+import com.example.demo.dto.PessoaResponseResponseDTO;
 import com.example.demo.dto.PessoaDTO;
-import com.example.demo.form.PessoaFORM;
-import com.example.demo.model.Pessoa;
 import com.example.demo.service.PessoaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -182,7 +189,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -192,15 +198,14 @@ public class PessoaController {
     private PessoaService pessoaService;
 
     /*
-    * Essa notação indica que esse método vai ser chamado em requisições GET
-    */
+     * Essa notação indica que esse método vai ser chamado em requisições GET
+     */
     @GetMapping
-    public ResponseEntity<List<PessoaDTO>> listagemPessoas(@RequestParam(required = false)String nome,
-                                                           @RequestParam(required = false)String uf,
-                                                           @RequestParam(required = false)String depois,
-                                                           @RequestParam(required = false)String antes,
-                                                           @RequestParam(required = false)Integer idade) {
-
+    public ResponseEntity<List<PessoaResponseResponseDTO>> listagemPessoas(@RequestParam(required = false)String nome,
+                                                                           @RequestParam(required = false)String uf,
+                                                                           @RequestParam(required = false)String depois,
+                                                                           @RequestParam(required = false)String antes,
+                                                                           @RequestParam(required = false)Integer idade) {
         if(nome!=null) {
             return ResponseEntity.ok(pessoaService.findByNome(nome.toUpperCase()));
         } else if(uf!=null) {
@@ -220,15 +225,11 @@ public class PessoaController {
      * Essa notação indica que esse método vai ser chamado em requisições POST
      */
     @PostMapping
-    public ResponseEntity<PessoaDTO> salvar(@Valid @RequestBody PessoaFORM p,
-                                         UriComponentsBuilder uriComponentsBuilder) {
-        try {
-            PessoaDTO pessoa = pessoaService.save(p);
-            URI uri = uriComponentsBuilder.path("/pessoa/{id}").buildAndExpand(pessoa.getId()).toUri();
-            return ResponseEntity.created(uri).body(pessoa);
-        }catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<PessoaResponseResponseDTO> salvar(@Valid @RequestBody PessoaDTO p,
+                                                            UriComponentsBuilder uriComponentsBuilder) {
+        PessoaResponseResponseDTO pessoa = pessoaService.save(p);
+        URI uri = uriComponentsBuilder.path("/pessoa/{id}").buildAndExpand(pessoa.getId()).toUri();
+        return ResponseEntity.created(uri).body(pessoa);
     }
 
     /*
@@ -241,14 +242,10 @@ public class PessoaController {
      * recebe no corpo da requisição, por isso Request Body, um objeto json do tipo Pessoa
      */
     @PutMapping("{id}")
-    public ResponseEntity<PessoaDTO> atualizar(@PathVariable Long id,
-                                            @Valid @RequestBody PessoaFORM p) {
-        try {
-            PessoaDTO pessoa = pessoaService.update(id, p);
-            return ResponseEntity.ok(pessoa);
-        }catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<PessoaResponseResponseDTO> atualizar(@PathVariable Long id,
+                                                               @Valid @RequestBody PessoaDTO p) {
+        PessoaResponseResponseDTO pessoa = pessoaService.update(id, p);
+        return ResponseEntity.ok(pessoa);
     }
 
     /*
@@ -256,12 +253,8 @@ public class PessoaController {
      */
     @DeleteMapping("{id}")
     public ResponseEntity<?> remover(@PathVariable Long id) {
-        try {
-            pessoaService.delete(id);
-            return ResponseEntity.ok().build();
-        }catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        pessoaService.delete(id);
+        return ResponseEntity.ok().build();
     }
 }
 ```
@@ -271,8 +264,8 @@ não podemos também trazer para o controller essa lista de Pessoa para o contro
 ```java
 package com.example.demo.service;
 
+import com.example.demo.dto.PessoaResponseResponseDTO;
 import com.example.demo.dto.PessoaDTO;
-import com.example.demo.form.PessoaFORM;
 import com.example.demo.model.Pessoa;
 import com.example.demo.repository.PessoaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -300,14 +293,14 @@ public class PessoaService {
     * repository mas fica de aprendizado.
     */
     @Transactional
-    public PessoaDTO save(PessoaFORM pessoa) {
+    public PessoaResponseResponseDTO save(PessoaDTO pessoa) {
         Pessoa novaPessoa = new Pessoa(pessoa);
         pessoaRepository.save(novaPessoa);
-        return new PessoaDTO(novaPessoa.getId(),novaPessoa.getNome(),novaPessoa.getEstado(),novaPessoa.getDateCeated());
+        return new PessoaResponseResponseDTO(novaPessoa.getId(),novaPessoa.getNome(),novaPessoa.getEstado(),novaPessoa.getDateCeated());
     }
 
     @Transactional
-    public PessoaDTO update(Long id, PessoaFORM pessoa) {
+    public PessoaResponseResponseDTO update(Long id, PessoaDTO pessoa) {
         if(pessoaRepository.findById(id).isPresent()) {
             Pessoa attPessoa = pessoaRepository.findById(id).get();
             attPessoa.setNome(pessoa.getNome().toUpperCase());
@@ -315,7 +308,7 @@ public class PessoaService {
             attPessoa.setDataNascimento(pessoa.getDataNascimento());
             attPessoa.setIdade(pessoa.getIdade());
             pessoaRepository.save(attPessoa);
-            return new PessoaDTO(attPessoa.getId(),attPessoa.getNome(),attPessoa.getEstado(),attPessoa.getDateCeated());
+            return new PessoaResponseResponseDTO(attPessoa.getId(),attPessoa.getNome(),attPessoa.getEstado(),attPessoa.getDateCeated());
         } else {
             return null;
         }
@@ -328,31 +321,31 @@ public class PessoaService {
         }
     }
 
-    public List<PessoaDTO> findByNome(String nome) {
+    public List<PessoaResponseResponseDTO> findByNome(String nome) {
         return conversorEntidadeParaDTO(pessoaRepository.findByNome(nome.toUpperCase()));
     }
 
-    public List<PessoaDTO> findByUF(String naturalidade) {
+    public List<PessoaResponseResponseDTO> findByUF(String naturalidade) {
         return conversorEntidadeParaDTO(pessoaRepository.findByEstado(naturalidade.toUpperCase()));
     }
 
-    public List<PessoaDTO> findByDataNascimentoAfter(String dataNascimento) {
+    public List<PessoaResponseResponseDTO> findByDataNascimentoAfter(String dataNascimento) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(dataNascimento,formatter);
         return conversorEntidadeParaDTO(pessoaRepository.findByDataNascimentoAfter(localDate));
     }
 
-    public List<PessoaDTO> findByDataNascimentoBefore(String dataNascimento) {
+    public List<PessoaResponseResponseDTO> findByDataNascimentoBefore(String dataNascimento) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(dataNascimento,formatter);
         return conversorEntidadeParaDTO(pessoaRepository.findByDataNascimentoBefore(localDate));
     }
 
-    public List<PessoaDTO> findByIdade(int idade) {
+    public List<PessoaResponseResponseDTO> findByIdade(int idade) {
         return conversorEntidadeParaDTO(pessoaRepository.findByIdade(idade));
     }
 
-    public List<PessoaDTO> findAll() {
+    public List<PessoaResponseResponseDTO> findAll() {
         return conversorEntidadeParaDTO(pessoaRepository.findAll());
     }
 
@@ -362,12 +355,12 @@ public class PessoaService {
      * for ou foreach sem qualquer prejuízo.
      */
 
-    private List<PessoaDTO> conversorEntidadeParaDTO(List<Pessoa> pessoas) {
-        List<PessoaDTO> pessoasDTO = new ArrayList<>();
-        pessoasDTO = pessoas.stream().map(pessoa -> new PessoaDTO(pessoa.getId(),
+    private List<PessoaResponseResponseDTO> conversorEntidadeParaDTO(List<Pessoa> pessoas) {
+        List<PessoaResponseResponseDTO> pessoasDTO = new ArrayList<>();
+        pessoasDTO = pessoas.stream().map(pessoa -> new PessoaResponseResponseDTO(pessoa.getId(),
                 pessoa.getNome(),pessoa.getEstado(),pessoa.getDateCeated())).collect(Collectors.toList());
         return pessoasDTO;
     }
 }
 ```
-Agora com as alterações feitas, nosso projeto está mais consistente e empregando melhores práticas de programação. O link para download do projeto está [aqui](https://drive.google.com/file/d/1E3rDbI3mURX0VxI8gb5qmmrigU_-85DA/view?usp=sharing) valendo ressaltar que a prática leva à perfeição então criem mais APIs para fixar o conhecimento e até o próximo post!
+Agora com as alterações feitas, nosso projeto está mais consistente e empregando melhores práticas de programação. O link para download do projeto está [aqui](https://drive.google.com/file/d/1Wl13wHkl0tMBELWbj1MJ_9iw7psZTpt3/view?usp=sharing) valendo ressaltar que a prática leva à perfeição então criem mais APIs para fixar o conhecimento e até o próximo post!
