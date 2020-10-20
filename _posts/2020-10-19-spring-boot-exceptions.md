@@ -10,4 +10,4 @@ Continuando de onde nós paramos, vamos enviar uma requisição para salvar uma 
 <br/>![exemplo de requisição](https://i.ibb.co/rHc8KgB/image.png)
 nosso cliente recebendo isso como resposta vai entender pelo status code que algo deu errado e aquela requisição falhou, mas o que falhou? Como ele vai entender o que fez errado para poder consertar? Vamos fazer criar os erros da nossa API para sinalizar o cliente o que ele fez errado.
 
-Primeiramente vamos criar um package <strong>error</strong> no projeto e criaremos uma classe PessoaServiceException que estende de Exception
+Primeiramente vamos criar um package <strong>error</strong> no projeto dois packages um chamado <strong>handler</strong> e outro chamado <strong>error</strong>
